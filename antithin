@@ -146,23 +146,27 @@ local function notify(msg)
     end)
 end
 
--- Send chat function (no cooldown, blank message fix)
+-- Send chat function with debug
 local function sendChat(message)
     if not message or message == "" then return end
 
     task.wait(0.2)
 
-    local ok1 = pcall(function()
+    local ok1, err1 = pcall(function()
         local TextChatService = game:GetService("TextChatService")
         local channel = TextChatService.TextChannels:WaitForChild("RBXGeneral", 3)
         channel:SendAsync(message)
     end)
 
     if not ok1 then
-        pcall(function()
+        warn("TextChatService failed: " .. tostring(err1))
+        local ok2, err2 = pcall(function()
             ReplicatedStorage:WaitForChild("DefaultChatSystemChatEvents", 3)
                 :WaitForChild("SayMessageRequest"):FireServer(message, "All")
         end)
+        if not ok2 then
+            warn("Fallback chat also failed: " .. tostring(err2))
+        end
     end
 end
 
