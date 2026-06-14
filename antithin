@@ -155,15 +155,13 @@ local function notify(msg)
     end)
 end
 
--- Fixed send chat for Kohl's Admin
-local function sendChat(message)
-    if not message or message == "" then return end
-
-    -- Method 1: Legacy chat (Kohl's Admin uses this)
+-- Hardcoded send chat for Kohl's Admin
+local function sendChat()
+    -- Method 1: Legacy chat
     local ok1 = pcall(function()
         local chatEvent = ReplicatedStorage:WaitForChild("DefaultChatSystemChatEvents", 3)
         local sayMessage = chatEvent:WaitForChild("SayMessageRequest", 3)
-        sayMessage:FireServer(message, "All")
+        sayMessage:FireServer(":ungear all", "All")
     end)
 
     if not ok1 then
@@ -172,7 +170,7 @@ local function sendChat(message)
             local TextChatService = game:GetService("TextChatService")
             local channel = TextChatService.TextChannels:FindFirstChild("RBXGeneral")
             if channel then
-                channel:SendAsync(message)
+                channel:SendAsync(":ungear all")
             end
         end)
     end
@@ -183,7 +181,6 @@ local function isGear(tool)
     if not tool or not tool:IsA("Tool") then return false end
     local handle = tool:FindFirstChild("Handle")
     if not handle then return false end
-    -- Check for SpecialMesh (gears always have this)
     local mesh = handle:FindFirstChildOfClass("SpecialMesh")
     if not mesh then return false end
     return true
@@ -198,7 +195,7 @@ local function watchBackpack()
             if isGear(item) then
                 if isEnabled then
                     task.wait(0.05)
-                    sendChat(":ungear all")
+                    sendChat()
                     notify("Gear detected! Running :ungear all")
                 end
             end
