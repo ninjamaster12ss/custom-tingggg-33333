@@ -146,26 +146,29 @@ local function notify(msg)
     end)
 end
 
--- Send chat function with debug
+-- Send chat function (legacy first)
 local function sendChat(message)
     if not message or message == "" then return end
 
     task.wait(0.2)
 
+    -- Try legacy chat first
     local ok1, err1 = pcall(function()
-        local TextChatService = game:GetService("TextChatService")
-        local channel = TextChatService.TextChannels:WaitForChild("RBXGeneral", 3)
-        channel:SendAsync(message)
+        local chatEvent = ReplicatedStorage:WaitForChild("DefaultChatSystemChatEvents", 3)
+            :WaitForChild("SayMessageRequest", 3)
+        chatEvent:FireServer(message, "All")
     end)
 
     if not ok1 then
-        warn("TextChatService failed: " .. tostring(err1))
+        warn("Legacy chat failed: " .. tostring(err1))
+        -- Try new TextChatService as fallback
         local ok2, err2 = pcall(function()
-            ReplicatedStorage:WaitForChild("DefaultChatSystemChatEvents", 3)
-                :WaitForChild("SayMessageRequest"):FireServer(message, "All")
+            local TextChatService = game:GetService("TextChatService")
+            local channel = TextChatService.TextChannels:WaitForChild("RBXGeneral", 3)
+            channel:SendAsync(message)
         end)
         if not ok2 then
-            warn("Fallback chat also failed: " .. tostring(err2))
+            warn("TextChatService fallback also failed: " .. tostring(err2))
         end
     end
 end
