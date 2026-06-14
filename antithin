@@ -44,4 +44,10 @@ statusLabel.BackgroundTransparency = 1
 statusLabel.Text = "Status: OFF"
 statusLabel.TextColor3 = Color3.fromRGB(255, 80, 80)
 statusLabel.TextSize = 14
-statusLabel.Fon
+statusLabel.Font = Enum.Font.Gotham
+statusLabel.Parent = frame
+
+local toggleBtn = Instance.new("TextButton")
+toggleBtn.Size = UDim2.new(0.8, 0, 0, 32)
+toggleBtn.Position = UDim2.new(0.1, 0, 0, 72)
+toggl
