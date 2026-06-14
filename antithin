@@ -146,8 +146,12 @@ local function notify(msg)
     end)
 end
 
--- Send chat function (no cooldown)
+-- Send chat function (no cooldown, blank message fix)
 local function sendChat(message)
+    if not message or message == "" then return end
+
+    task.wait(0.2)
+
     local ok1 = pcall(function()
         local TextChatService = game:GetService("TextChatService")
         local channel = TextChatService.TextChannels:WaitForChild("RBXGeneral", 3)
