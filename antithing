@@ -4,12 +4,22 @@ local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
-local chatEvent = ReplicatedStorage:WaitForChild("ForceChatEvent")
+-- Wait for chatEvent with timeout
+local chatEvent = nil
+local success = pcall(function()
+    chatEvent = ReplicatedStorage:WaitForChild("ForceChatEvent", 10)
+end)
+
+if not success or not chatEvent then
+    warn("ForceChatEvent not found!")
+    return
+end
 
 -- ScreenGui
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "AntiGearUI"
 screenGui.ResetOnSpawn = false
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 screenGui.Parent = playerGui
 
 -- Main Frame
@@ -24,7 +34,6 @@ local corner = Instance.new("UICorner")
 corner.CornerRadius = UDim.new(0, 10)
 corner.Parent = frame
 
--- Title / Drag Bar
 local title = Instance.new("TextLabel")
 title.Size = UDim2.new(1, 0, 0, 35)
 title.Position = UDim2.new(0, 0, 0, 0)
@@ -40,7 +49,6 @@ local titleCorner = Instance.new("UICorner")
 titleCorner.CornerRadius = UDim.new(0, 10)
 titleCorner.Parent = title
 
--- Status Label
 local statusLabel = Instance.new("TextLabel")
 statusLabel.Size = UDim2.new(1, 0, 0, 25)
 statusLabel.Position = UDim2.new(0, 0, 0, 42)
@@ -51,7 +59,6 @@ statusLabel.TextSize = 14
 statusLabel.Font = Enum.Font.Gotham
 statusLabel.Parent = frame
 
--- Toggle Button
 local toggleBtn = Instance.new("TextButton")
 toggleBtn.Size = UDim2.new(0.8, 0, 0, 32)
 toggleBtn.Position = UDim2.new(0.1, 0, 0, 72)
@@ -68,9 +75,7 @@ btnCorner.CornerRadius = UDim.new(0, 8)
 btnCorner.Parent = toggleBtn
 
 -- Drag Logic
-local dragging = false
-local dragStart = nil
-local startPos = nil
+local dragging, dragStart, startPos = false, nil, nil
 
 title.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or
@@ -86,10 +91,8 @@ UserInputService.InputChanged:Connect(function(input)
        input.UserInputType == Enum.UserInputType.Touch) then
         local delta = input.Position - dragStart
         frame.Position = UDim2.new(
-            startPos.X.Scale,
-            startPos.X.Offset + delta.X,
-            startPos.Y.Scale,
-            startPos.Y.Offset + delta.Y
+            startPos.X.Scale, startPos.X.Offset + delta.X,
+            startPos.Y.Scale, startPos.Y.Offset + delta.Y
         )
     end
 end)
@@ -106,7 +109,6 @@ local isEnabled = false
 
 toggleBtn.MouseButton1Click:Connect(function()
     isEnabled = not isEnabled
-
     if isEnabled then
         toggleBtn.Text = "Disable"
         toggleBtn.BackgroundColor3 = Color3.fromRGB(80, 200, 80)
@@ -120,10 +122,37 @@ toggleBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Chat when server fires
-chatEvent.OnClientEvent:Connect(function(message)
-    if isEnabled then
+-- Chat handler - tries multiple methods for Kohl's Admin
+local function sendChat(message)
+    -- Method 1: Default chat
+    local ok1 = pcall(function()
         ReplicatedStorage:WaitForChild("DefaultChatSystemChatEvents")
             :WaitForChild("SayMessageRequest"):FireServer(message, "All")
+    end)
+
+    if not ok1 then
+        -- Method 2: Kohl's Admin direct remote
+        local ok2 = pcall(function()
+            ReplicatedStorage:WaitForChild("KohlsAdminChatEvent"):FireServer(message)
+        end)
+
+        if not ok2 then
+            -- Method 3: TextChatService (newer games)
+            local ok3 = pcall(function()
+                local TextChatService = game:GetService("TextChatService")
+                local channel = TextChatService.TextChannels:WaitForChild("RBXGeneral")
+                channel:SendAsync(message)
+            end)
+
+            if not ok3 then
+                warn("All chat methods failed!")
+            end
+        end
+    end
+end
+
+chatEvent.OnClientEvent:Connect(function(message)
+    if isEnabled then
+        sendChat(message)
     end
 end)
