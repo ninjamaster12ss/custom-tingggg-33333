@@ -112,37 +112,46 @@ end)
 
 -- Notification function
 local function notify(msg)
-    local screenGui2 = Instance.new("ScreenGui")
-    screenGui2.ResetOnSpawn = false
-    screenGui2.Parent = playerGui
+    pcall(function()
+        local pg = player:WaitForChild("PlayerGui", 5)
+        if not pg then return end
 
-    local notifFrame = Instance.new("Frame")
-    notifFrame.Size = UDim2.new(0, 250, 0, 40)
-    notifFrame.Position = UDim2.new(0.5, -125, 0, 20)
-    notifFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-    notifFrame.BorderSizePixel = 0
-    notifFrame.Parent = screenGui2
+        local screenGui2 = Instance.new("ScreenGui")
+        screenGui2.ResetOnSpawn = false
+        screenGui2.Parent = pg
 
-    local notifCorner = Instance.new("UICorner")
-    notifCorner.CornerRadius = UDim.new(0, 8)
-    notifCorner.Parent = notifFrame
+        local notifFrame = Instance.new("Frame")
+        notifFrame.Size = UDim2.new(0, 250, 0, 40)
+        notifFrame.Position = UDim2.new(0.5, -125, 0, 20)
+        notifFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+        notifFrame.BorderSizePixel = 0
+        notifFrame.Parent = screenGui2
 
-    local notifLabel = Instance.new("TextLabel")
-    notifLabel.Size = UDim2.new(1, 0, 1, 0)
-    notifLabel.BackgroundTransparency = 1
-    notifLabel.Text = "✅ " .. msg
-    notifLabel.TextColor3 = Color3.fromRGB(80, 200, 80)
-    notifLabel.TextSize = 14
-    notifLabel.Font = Enum.Font.GothamBold
-    notifLabel.Parent = notifFrame
+        local notifCorner = Instance.new("UICorner")
+        notifCorner.CornerRadius = UDim.new(0, 8)
+        notifCorner.Parent = notifFrame
 
-    task.delay(4, function()
-        for i = 1, 10 do
-            notifFrame.BackgroundTransparency = i / 10
-            notifLabel.TextTransparency = i / 10
-            task.wait(0.1)
-        end
-        screenGui2:Destroy()
+        local notifLabel = Instance.new("TextLabel")
+        notifLabel.Size = UDim2.new(1, 0, 1, 0)
+        notifLabel.BackgroundTransparency = 1
+        notifLabel.Text = "✅ " .. msg
+        notifLabel.TextColor3 = Color3.fromRGB(80, 200, 80)
+        notifLabel.TextSize = 14
+        notifLabel.Font = Enum.Font.GothamBold
+        notifLabel.Parent = notifFrame
+
+        task.delay(4, function()
+            for i = 1, 10 do
+                if notifFrame and notifFrame.Parent then
+                    notifFrame.BackgroundTransparency = i / 10
+                    notifLabel.TextTransparency = i / 10
+                end
+                task.wait(0.1)
+            end
+            if screenGui2 and screenGui2.Parent then
+                screenGui2:Destroy()
+            end
+        end)
     end)
 end
 
@@ -177,13 +186,15 @@ local function watchBackpack()
     if not backpack then return end
 
     local function checkItem(item)
-        if item:IsA("Tool") and isGear(item) then
-            if isEnabled then
-                task.wait(0.05)
-                sendChat(":ungear all")
-                notify("Gear detected! Running :ungear all")
+        pcall(function()
+            if item:IsA("Tool") and isGear(item) then
+                if isEnabled then
+                    task.wait(0.05)
+                    sendChat(":ungear all")
+                    notify("Gear detected! Running :ungear all")
+                end
             end
-        end
+        end)
     end
 
     for _, item in ipairs(backpack:GetChildren()) do
@@ -195,10 +206,13 @@ end
 
 -- Watch on spawn
 player.CharacterAdded:Connect(function()
-    task.wait(0.2)
-    watchBackpack()
+    task.wait(0.5)
+    pcall(watchBackpack)
 end)
 
--- Startup notification and watch immediately
-notify("Anti-Gear is running!")
-watchBackpack()
+-- Startup
+task.spawn(function()
+    task.wait(1)
+    notify("Anti-Gear is running!")
+    pcall(watchBackpack)
+end)
