@@ -4,17 +4,6 @@ local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 
--- Wait for chatEvent with timeout
-local chatEvent = nil
-local success = pcall(function()
-    chatEvent = ReplicatedStorage:WaitForChild("ForceChatEvent", 10)
-end)
-
-if not success or not chatEvent then
-    warn("ForceChatEvent not found!")
-    return
-end
-
 -- ScreenGui
 local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "AntiGearUI"
@@ -22,7 +11,6 @@ screenGui.ResetOnSpawn = false
 screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 screenGui.Parent = playerGui
 
--- Main Frame
 local frame = Instance.new("Frame")
 frame.Size = UDim2.new(0, 220, 0, 110)
 frame.Position = UDim2.new(0, 16, 0.5, -55)
@@ -122,37 +110,98 @@ toggleBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- Chat handler - tries multiple methods for Kohl's Admin
+-- Notification function
+local function notify(msg)
+    local screenGui2 = Instance.new("ScreenGui")
+    screenGui2.ResetOnSpawn = false
+    screenGui2.Parent = playerGui
+
+    local notifFrame = Instance.new("Frame")
+    notifFrame.Size = UDim2.new(0, 250, 0, 40)
+    notifFrame.Position = UDim2.new(0.5, -125, 0, 20)
+    notifFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    notifFrame.BorderSizePixel = 0
+    notifFrame.Parent = screenGui2
+
+    local notifCorner = Instance.new("UICorner")
+    notifCorner.CornerRadius = UDim.new(0, 8)
+    notifCorner.Parent = notifFrame
+
+    local notifLabel = Instance.new("TextLabel")
+    notifLabel.Size = UDim2.new(1, 0, 1, 0)
+    notifLabel.BackgroundTransparency = 1
+    notifLabel.Text = "✅ " .. msg
+    notifLabel.TextColor3 = Color3.fromRGB(80, 200, 80)
+    notifLabel.TextSize = 14
+    notifLabel.Font = Enum.Font.GothamBold
+    notifLabel.Parent = notifFrame
+
+    task.delay(4, function()
+        for i = 1, 10 do
+            notifFrame.BackgroundTransparency = i / 10
+            notifLabel.TextTransparency = i / 10
+            task.wait(0.1)
+        end
+        screenGui2:Destroy()
+    end)
+end
+
+-- Send chat function with multiple fallbacks
+local cooldown = false
 local function sendChat(message)
-    -- Method 1: Default chat
+    if cooldown then return end
+    cooldown = true
+
     local ok1 = pcall(function()
-        ReplicatedStorage:WaitForChild("DefaultChatSystemChatEvents")
-            :WaitForChild("SayMessageRequest"):FireServer(message, "All")
+        local TextChatService = game:GetService("TextChatService")
+        local channel = TextChatService.TextChannels:WaitForChild("RBXGeneral", 3)
+        channel:SendAsync(message)
     end)
 
     if not ok1 then
-        -- Method 2: Kohl's Admin direct remote
-        local ok2 = pcall(function()
-            ReplicatedStorage:WaitForChild("KohlsAdminChatEvent"):FireServer(message)
+        pcall(function()
+            ReplicatedStorage:WaitForChild("DefaultChatSystemChatEvents", 3)
+                :WaitForChild("SayMessageRequest"):FireServer(message, "All")
         end)
+    end
 
-        if not ok2 then
-            -- Method 3: TextChatService (newer games)
-            local ok3 = pcall(function()
-                local TextChatService = game:GetService("TextChatService")
-                local channel = TextChatService.TextChannels:WaitForChild("RBXGeneral")
-                channel:SendAsync(message)
-            end)
+    task.wait(2)
+    cooldown = false
+end
 
-            if not ok3 then
-                warn("All chat methods failed!")
+-- Detect gear client side
+local function isGear(tool)
+    local handle = tool:FindFirstChild("Handle")
+    return handle and handle:FindFirstChildOfClass("SpecialMesh")
+end
+
+local function watchBackpack()
+    local backpack = player:WaitForChild("Backpack", 10)
+    if not backpack then return end
+
+    local function checkItem(item)
+        if item:IsA("Tool") and isGear(item) then
+            if isEnabled then
+                task.wait(0.2)
+                sendChat(":ungear all")
+                notify("Gear detected! Running :ungear all")
             end
         end
     end
+
+    for _, item in ipairs(backpack:GetChildren()) do
+        checkItem(item)
+    end
+
+    backpack.ChildAdded:Connect(checkItem)
 end
 
-chatEvent.OnClientEvent:Connect(function(message)
-    if isEnabled then
-        sendChat(message)
-    end
+-- Watch on spawn
+player.CharacterAdded:Connect(function()
+    task.wait(1)
+    watchBackpack()
 end)
+
+-- Startup notification and watch immediately
+notify("Anti-Gear is running!")
+watchBackpack()
