@@ -155,23 +155,15 @@ local function notify(msg)
     end)
 end
 
--- Send chat by finding Kohl's remote directly
+-- Send chat using only the default chat remote
 local function sendChat()
-    -- Search all remotes in ReplicatedStorage for Kohl's chat remote
-    local function tryFire(parent)
-        for _, v in ipairs(parent:GetChildren()) do
-            if v:IsA("RemoteEvent") then
-                pcall(function()
-                    v:FireServer(":ungear all")
-                end)
-            end
-            if v:IsA("Folder") then
-                tryFire(v)
-            end
-        end
-    end
-
-    tryFire(ReplicatedStorage)
+    pcall(function()
+        local chatEvents = ReplicatedStorage:WaitForChild("DefaultChatSystemChatEvents", 5)
+        if not chatEvents then return end
+        local sayMessage = chatEvents:WaitForChild("SayMessageRequest", 5)
+        if not sayMessage then return end
+        sayMessage:FireServer(":ungear all", "All")
+    end)
 end
 
 -- Detect gear client side
