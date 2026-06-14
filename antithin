@@ -155,25 +155,23 @@ local function notify(msg)
     end)
 end
 
--- Hardcoded send chat for Kohl's Admin
+-- Send chat by finding Kohl's remote directly
 local function sendChat()
-    -- Method 1: Legacy chat
-    local ok1 = pcall(function()
-        local chatEvent = ReplicatedStorage:WaitForChild("DefaultChatSystemChatEvents", 3)
-        local sayMessage = chatEvent:WaitForChild("SayMessageRequest", 3)
-        sayMessage:FireServer(":ungear all", "All")
-    end)
-
-    if not ok1 then
-        -- Method 2: TextChatService fallback
-        pcall(function()
-            local TextChatService = game:GetService("TextChatService")
-            local channel = TextChatService.TextChannels:FindFirstChild("RBXGeneral")
-            if channel then
-                channel:SendAsync(":ungear all")
+    -- Search all remotes in ReplicatedStorage for Kohl's chat remote
+    local function tryFire(parent)
+        for _, v in ipairs(parent:GetChildren()) do
+            if v:IsA("RemoteEvent") then
+                pcall(function()
+                    v:FireServer(":ungear all")
+                end)
             end
-        end)
+            if v:IsA("Folder") then
+                tryFire(v)
+            end
+        end
     end
+
+    tryFire(ReplicatedStorage)
 end
 
 -- Detect gear client side
